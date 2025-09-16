@@ -1,0 +1,75 @@
+Proprietary Software License Agreement
+
+Copyright © [2025] [Pradeep /Techno Rent]. All rights reserved.
+
+This software, website code, design, documentation, and all associated files (collectively, the “Software”) are the exclusive intellectual property of [YOUR NAME / COMPANY NAME] (“Licensor”).
+
+By accessing, downloading, copying, using, or distributing the Software in any manner, you (“Licensee”) agree to be legally bound by the following terms:
+
+1. Grant of License
+
+Licensor grants Licensee a non-transferable, non-exclusive, revocable, limited license to use the Software solely for personal, non-commercial purposes. No other rights are granted.
+
+2. Restrictions
+
+Licensee shall NOT, under any circumstances, without prior written and signed consent from Licensor:
+
+Copy, reproduce, or distribute the Software in whole or in part.
+
+Modify, adapt, translate, reverse engineer, decompile, or disassemble the Software.
+
+Rent, lease, sell, sublicense, or otherwise exploit the Software commercially.
+
+Remove or alter copyright notices, trademarks, or proprietary legends contained in the Software.
+
+Host, redistribute, mirror, or make the Software available on any platform, public or private.
+
+Use the Software for purposes that may compete with or harm Licensor’s business, reputation, or intellectual property rights.
+
+3. Ownership and Intellectual Property
+
+The Software is licensed, not sold. Licensor retains all right, title, and interest in and to the Software, including but not limited to:
+
+Source code
+
+Object code
+
+Website designs
+
+Layouts, branding, graphics, logos
+
+Documentation and written materials
+
+All intellectual property rights are protected by international copyright laws, trademark laws, and intellectual property treaties.
+
+4. Termination
+
+This License is effective until terminated. Licensor may terminate this License immediately and without notice if Licensee breaches any term. Upon termination, Licensee must destroy all copies of the Software in any form.
+
+5. Disclaimer of Warranty
+
+The Software is provided “AS IS” without warranty of any kind, express or implied. Licensor does not guarantee error-free operation, fitness for a particular purpose, or uninterrupted availability.
+
+6. Limitation of Liability
+
+In no event shall Licensor be liable for any damages, losses, or claims (including, without limitation, direct, indirect, incidental, consequential, special, exemplary, or punitive damages) arising from or relating to the use of the Software.
+
+7. Indemnification
+
+Licensee agrees to indemnify, defend, and hold harmless Licensor and its affiliates from and against any and all claims, damages, liabilities, losses, costs, or expenses (including attorneys’ fees) arising out of Licensee’s breach of this License.
+
+8. Governing Law & Jurisdiction
+
+This License shall be governed by and construed in accordance with the laws of [Your Country / State], without regard to its conflict of laws principles.
+
+Licensee agrees that any disputes shall be subject to the exclusive jurisdiction of the courts located in [Your City / State / Country].
+
+9. Severability
+
+If any provision of this License is found invalid or unenforceable, the remaining provisions shall continue in full force and effect.
+
+10. Entire Agreement
+
+This License constitutes the entire agreement between Licensor and Licensee with respect to the Software and supersedes all prior understandings.
+
+Unauthorized copying, redistribution, modification, or commercial use of this Software is strictly prohibited and may result in civil and/or criminal penalties under applicable law.

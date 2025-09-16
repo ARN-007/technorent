@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Team Planner — Calendar To-Do</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Auth Screen -->
+  <main id="auth" class="centered">
+    <section class="card auth-card">
+      <h1>Team Planner</h1>
+      <p class="muted">Sign in to manage your schedule</p>
+      <form id="loginForm" autocomplete="off">
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" required placeholder="e.g., anita" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn primary">Sign In</button>
+        <p class="muted tiny">
+          Note: This demo stores data locally in your browser. Best for small teams (≤ 10 users).
+        </p>
+      </form>
+    </section>
+  </main>
+
+  <!-- App Screen -->
+  <div id="app" class="hidden app-shell">
+    <header class="app-header">
+      <div class="left">
+        <h2>Team Planner</h2>
+        <span id="greeting" class="muted"></span>
+      </div>
+      <div class="right">
+        <select id="themeSelector">
+          <option value="">Default</option>
+          <option value="light">Light</option>
+          <option value="solarized">Solarized</option>
+          <option value="highcontrast">High Contrast</option>
+        </select>
+        <button id="logoutBtn" class="btn">Logout</button>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div class="month-nav">
+        <button id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
+        <h3 id="monthLabel"></h3>
+        <button id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
+        <button id="todayBtn" class="btn small">Today</button>
+      </div>
+    </section>
+
+    <main class="grid">
+      <section class="calendar card">
+        <div class="weekdays">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="daysGrid" class="days"></div>
+      </section>
+
+      <aside class="details card">
+        <h4 id="selectedDateLabel">Select a date</h4>
+
+        <div id="timePickerWrap" class="field hidden">
+          <label for="timePicker">Time</label>
+          <select id="timePicker">
+            <option value="" disabled selected>Select a time slot</option>
+          </select>
+        </div>
+
+        <div id="entryForm" class="hidden">
+          <div class="field">
+            <label for="placeInput">Place</label>
+            <input id="placeInput" type="text" placeholder="e.g., Conference Room B" />
+          </div>
+
+          <div class="field">
+            <label for="remarksInput">Remarks</label>
+            <textarea id="remarksInput" rows="3" placeholder="Notes / agenda / reminders"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="pickFromDate">Pick From Location Date</label>
+            <input id="pickFromDate" type="date" required />
+          </div>
+
+          <div class="field">
+            <label for="dropToDate">Drop To Location Date</label>
+            <input id="dropToDate" type="date" readonly />
+          </div>
+
+          <div class="field">
+            <label for="recurrence">Recurrence</label>
+            <select id="recurrence">
+              <option value="">None</option>
+              <option value="Daily">Daily</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Monthly">Monthly</option>
+            </select>
+          </div>
+
+          <div class="actions">
+            <button id="saveBtn" class="btn primary">Save</button>
+            <button id="clearBtn" class="btn ghost">Clear</button>
+          </div>
+        </div>
+
+        <hr />
+
+        <div>
+          <h5>Entries for this date</h5>
+          <ul id="entriesList" class="entries"></ul>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="app-footer">
+      <span class="muted tiny">Local-only demo • Data stored per-username in your browser</span>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
