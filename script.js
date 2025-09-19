@@ -3,6 +3,10 @@
    ========================= */
 const STORAGE_KEY = "teamPlannerData_v1";
 const SESSION_KEY = "teamPlannerCurrentUser";
+let isEditMode = false;
+let editSlot = null;   // stores time being edited
+let editIndex = null;  // stores which entry in that slot
+
 
 /**
  * Shape:
@@ -66,19 +70,6 @@ const clearBtn = document.getElementById("clearBtn");
 const entriesList = document.getElementById("entriesList");
 
 const pickFromDate = document.getElementById("pickFromDate");
-const dropToDate = document.getElementById("dropToDate");
-
-pickFromDate.addEventListener("change", () => {
-  const fromDate = new Date(pickFromDate.value);
-  if (isNaN(fromDate)) return;
-
-  const dropDate = new Date(fromDate.getTime() + (24 + Math.floor(Math.random() * 13)) * 60 * 60 * 1000);
-  const yyyy = dropDate.getFullYear();
-  const mm = String(dropDate.getMonth() + 1).padStart(2, "0");
-  const dd = String(dropDate.getDate()).padStart(2, "0");
-
-  dropToDate.value = `${yyyy}-${mm}-${dd}`;
-});
 
 
 function showPopup(message, type = "info", duration = 3000) {
@@ -165,9 +156,14 @@ function getEntriesFor(db, username, ymd) {
 function setEntry(db, username, ymd, time, obj) {
   ensureUser(db, username);
   if (!db.users[username].entries[ymd]) db.users[username].entries[ymd] = {};
-  db.users[username].entries[ymd][time] = obj;
+  if (!db.users[username].entries[ymd][time]) db.users[username].entries[ymd][time] = [];
+
+  // push new entry instead of overwriting
+  db.users[username].entries[ymd][time].push(obj);
+
   saveDB(db);
 }
+
 
 function deleteEntry(db, username, ymd, time) {
   ensureUser(db, username);
@@ -274,7 +270,29 @@ function renderCalendar() {
 
     const ymd = fmtDateYMD(date);
     const entries = user ? getEntriesFor(db, user, ymd) : {};
-    const count = Object.keys(entries).length;
+    let count = 0;
+
+    // Count entries (works for both single + multiple per slot)
+    for (const t in entries) {
+      if (Array.isArray(entries[t])) {
+        count += entries[t].length;
+      } else {
+        count++;
+      }
+    }
+
+    // Highlight if this date is a pickup date for ANY entry in the whole DB
+    for (const [d, times] of Object.entries(db.users[user]?.entries || {})) {
+      for (const entryOrList of Object.values(times)) {
+        const entryList = Array.isArray(entryOrList) ? entryOrList : [entryOrList];
+        entryList.forEach(entry => {
+          if (entry.pickupDate && fmtDateYMD(new Date(entry.pickupDate)) === ymd) {
+            cell.classList.add("pickup-highlight");
+          }
+        });
+      }
+    }
+
     if (count > 0) {
       badge.textContent = count;
       cell.appendChild(badge);
@@ -288,12 +306,156 @@ function renderCalendar() {
 
 function onSelectDate(ymd) {
   selectedDateStr = ymd;
-  selectedDateLabel.textContent = new Date(ymd).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  selectedDateLabel.textContent = new Date(ymd).toLocaleDateString(undefined, { 
+    weekday: "long", 
+    year: "numeric", 
+    month: "long", 
+    day: "numeric" 
+  });
+
   timePickerWrap.classList.remove("hidden");
   entryForm.classList.add("hidden");
   clearForm();
-  renderEntriesList();
+
+  const user = getCurrentUser();
+  const db = loadDB();
+
+  entriesList.innerHTML = ""; // clear before showing fresh
+
+  // 🔍 Collect pickup entries pointing to this date
+  let pickupEntries = [];
+  for (const [d, times] of Object.entries(db.users[user]?.entries || {})) {
+    for (const [time, entryOrList] of Object.entries(times)) {
+      const entryList = Array.isArray(entryOrList) ? entryOrList : [entryOrList];
+      entryList.forEach(entry => {
+        if (entry.pickupDate && fmtDateYMD(new Date(entry.pickupDate)) === ymd) {
+          pickupEntries.push({ ...entry, time });
+        }
+      });
+    }
+  }
+
+  // 🟢 Show pickup entries in read-only form
+  if (pickupEntries.length > 0) {
+    const heading = document.createElement("li");
+    heading.className = "muted tiny";
+    heading.textContent = "Pickup Entries (read-only)";
+    entriesList.appendChild(heading);
+
+    pickupEntries.forEach(pickupEntry => {
+      const li = document.createElement("li");
+      li.className = "entry readonly";
+      li.innerHTML = `
+        <div style="flex:1">
+          <div class="title">${pickupEntry.place || "(No place)"}</div>
+          <div class="meta">
+            <span class="badge">${pickupEntry.time}</span>
+            ${pickupEntry.remarks ? " • " + pickupEntry.remarks : ""}
+            • Pickup: ${new Date(pickupEntry.pickupDate).toLocaleDateString()}
+          </div>
+        </div>
+      `;
+      entriesList.appendChild(li);
+    });
+  }
+
+  // 📝 Render editable entries for this date
+  const map = getEntriesFor(db, user, ymd);
+  const times = Object.keys(map).sort((a, b) => a.localeCompare(b));
+
+  if (times.length === 0 && pickupEntries.length === 0) {
+    const li = document.createElement("li");
+    li.className = "muted tiny";
+    li.textContent = "No entries yet for this date.";
+    entriesList.appendChild(li);
+  } else {
+    times.forEach(t => {
+      const entryList = Array.isArray(map[t]) ? map[t] : [map[t]];
+      entryList.forEach(({ place = "", remarks = "", pickupDate = "" }, idx) => {
+        const li = document.createElement("li");
+        li.className = "entry";
+
+        const left = document.createElement("div");
+        left.style.flex = "1";
+
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = place || "(No place)";
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.innerHTML = `
+          <span class="badge">${t}</span>
+          ${remarks ? " • " + remarks : ""}
+          ${pickupDate ? " • Pickup: " + new Date(pickupDate).toLocaleDateString() : ""}
+        `;
+
+        left.appendChild(title);
+        left.appendChild(meta);
+
+        const right = document.createElement("div");
+        right.className = "actions";
+
+        const past = isPastSlot(ymd, t);
+
+        // ----- Edit Button -----
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn small";
+        editBtn.textContent = "Edit";
+        editBtn.disabled = past;
+        editBtn.addEventListener("click", () => {
+          timePicker.value = t;
+          placeInput.value = place;
+          remarksInput.value = remarks;
+          pickFromDate.value = pickupDate;
+
+          // mark edit state
+          isEditMode = true;
+          editSlot = t;
+          editIndex = idx;
+
+          entryForm.classList.remove("hidden");
+          timePickerWrap.classList.remove("hidden");
+          placeInput.focus();
+        });
+
+        // ----- Delete Button -----
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn small";
+        delBtn.style.borderColor = "rgba(239,68,68,0.35)";
+        delBtn.textContent = "Delete";
+        delBtn.disabled = past;
+        delBtn.addEventListener("click", () => {
+          showConfirm(`Are you sure you want to delete the ${t} entry?`).then(confirmed => {
+            if (!confirmed) return;
+            if (Array.isArray(db.users[user].entries[ymd][t])) {
+              db.users[user].entries[ymd][t].splice(idx, 1);
+              if (db.users[user].entries[ymd][t].length === 0) {
+                delete db.users[user].entries[ymd][t];
+              }
+            } else {
+              delete db.users[user].entries[ymd][t];
+            }
+            saveDB(db);
+            renderCalendar();
+            onSelectDate(ymd);
+            showPopup("Entry deleted.", "info", 2500);
+          });
+        });
+
+        right.appendChild(editBtn);
+        right.appendChild(delBtn);
+
+        li.appendChild(left);
+        li.appendChild(right);
+
+        entriesList.appendChild(li);
+      });
+    });
+  }
 }
+
+
 
 timePicker.addEventListener("change", () => {
   if (!selectedDateStr || !timePicker.value) return;
@@ -305,9 +467,8 @@ timePicker.addEventListener("change", () => {
   if (existing) {
     placeInput.value = existing.place || "";
     remarksInput.value = existing.remarks || "";
-    recurrenceSelect.value = existing.recurrence || "none";
-    pickupDateInput.value = existing.pickupDate || "";
-    dropDateInput.value = existing.dropDate || "";
+    // Prefill the single manual date field
+    pickFromDate.value = existing.pickupDate || "";
   } else {
     clearForm(false);
   }
@@ -332,19 +493,43 @@ saveBtn.addEventListener("click", () => {
 
   const place = (placeInput.value || "").trim();
   const remarks = (remarksInput.value || "").trim();
-  const recurrence = recurrenceSelect.value;
-  const pickupDate = pickupDateInput.value;
-  const dropDate = dropDateInput.value;
+  const pickupDate = pickFromDate.value;
 
   const db = loadDB();
-  setEntry(db, user, selectedDateStr, time, {
-    place, remarks, recurrence, pickupDate, dropDate
-  });
+  ensureUser(db, user);
 
+  if (!db.users[user].entries[selectedDateStr]) {
+    db.users[user].entries[selectedDateStr] = {};
+  }
+
+  if (!db.users[user].entries[selectedDateStr][time]) {
+    db.users[user].entries[selectedDateStr][time] = [];
+  }
+
+  if (isEditMode) {
+    // 🔄 Replace existing entry instead of duplicating
+    db.users[user].entries[selectedDateStr][editSlot][editIndex] = {
+      place, remarks, pickupDate
+    };
+    isEditMode = false;
+    editSlot = null;
+    editIndex = null;
+  } else {
+    // ➕ Add new entry
+    db.users[user].entries[selectedDateStr][time].push({
+      place, remarks, pickupDate
+    });
+  }
+
+  saveDB(db);
   renderCalendar();
-  renderEntriesList();
+  onSelectDate(selectedDateStr); // refresh current date
   showPopup("Entry saved successfully!", "success", 2500);
+
+  entryForm.classList.add("hidden");
 });
+
+
 
 clearBtn.addEventListener("click", () => clearForm(true));
 
@@ -357,6 +542,7 @@ function clearForm(resetTime = false) {
 /* =========================
    Entries List (edit/delete)
    ========================= */
+
 function renderEntriesList() {
   const user = getCurrentUser();
   const db = loadDB();
@@ -374,77 +560,90 @@ function renderEntriesList() {
   }
 
   times.forEach(t => {
-    const { place = "", remarks = "", recurrence = "none", pickupDate = "", dropDate = "" } = map[t] || {};
+    const entriesAtTime = Array.isArray(map[t]) ? map[t] : [map[t]];
 
-    const li = document.createElement("li");
-    li.className = "entry";
+    entriesAtTime.forEach((entry, idx) => {
+      const { place = "", remarks = "", pickupDate = "" } = entry || {};
 
-    const left = document.createElement("div");
-    left.style.flex = "1";
+      const li = document.createElement("li");
+      li.className = "entry";
 
-    const title = document.createElement("div");
-    title.className = "title";
-    title.textContent = place || "(No place)";
+      const left = document.createElement("div");
+      left.style.flex = "1";
 
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.innerHTML = `
-      <span class="badge">${t}</span> 
-      ${remarks ? " • " + remarks : ""} 
-      ${pickupDate ? " • Pickup: " + new Date(pickupDate).toLocaleString() : ""} 
-      ${dropDate ? " • Drop: " + new Date(dropDate).toLocaleString() : ""} 
-      ${recurrence !== "none" ? " • Recurs: " + recurrence : ""}
-    `;
+      const title = document.createElement("div");
+      title.className = "title";
+      title.textContent = place || "(No place)";
 
-    left.appendChild(title);
-    left.appendChild(meta);
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML = `
+        <span class="badge">${t}${entriesAtTime.length > 1 ? ` #${idx + 1}` : ""}</span> 
+        ${remarks ? " • " + remarks : ""} 
+        ${pickupDate ? " • Pickup: " + new Date(pickupDate).toLocaleDateString() : ""}
+      `;
 
-    const right = document.createElement("div");
-    right.className = "actions";
+      left.appendChild(title);
+      left.appendChild(meta);
 
-    const past = isPastSlot(selectedDateStr, t);
+      const right = document.createElement("div");
+      right.className = "actions";
 
-    // ----- Edit Button -----
-    const editBtn = document.createElement("button");
-    editBtn.className = "btn small";
-    editBtn.textContent = "Edit";
-    editBtn.disabled = past;
-    editBtn.addEventListener("click", () => {
-      // Prefill all fields
-      timePicker.value = t;
-      placeInput.value = place;
-      remarksInput.value = remarks;
-      recurrenceSelect.value = recurrence;
-      pickupDateInput.value = pickupDate;
-      dropDateInput.value = dropDate;
+      const past = isPastSlot(selectedDateStr, t);
 
-      entryForm.classList.remove("hidden");
-      timePickerWrap.classList.remove("hidden");
-      placeInput.focus();
-    });
+      // ----- Edit Button -----
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn small";
+      editBtn.textContent = "Edit";
+      editBtn.disabled = past;
+      editBtn.addEventListener("click", () => {
+        timePicker.value = t;
+        placeInput.value = place;
+        remarksInput.value = remarks;
+        pickFromDate.value = pickupDate;
 
-    // ----- Delete Button -----
-    const delBtn = document.createElement("button");
-    delBtn.className = "btn small";
-    delBtn.style.borderColor = "rgba(239,68,68,0.35)";
-    delBtn.textContent = "Delete";
-    delBtn.disabled = past;
-    delBtn.addEventListener("click", () => {
-      showConfirm(`Are you sure you want to delete the ${t} entry?`, () => {
-        deleteEntry(db, user, selectedDateStr, t);
-        renderCalendar();
-        renderEntriesList();
-        showPopup("Entry deleted.", "info", 2500);
+        entryForm.classList.remove("hidden");
+        timePickerWrap.classList.remove("hidden");
+        placeInput.focus();
       });
+
+      // ----- Delete Button -----
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn small";
+      delBtn.style.borderColor = "rgba(239,68,68,0.35)";
+      delBtn.textContent = "Delete";
+      delBtn.disabled = past;
+      delBtn.addEventListener("click", () => {
+        showConfirm(`Are you sure you want to delete this entry at ${t}?`).then(confirmed => {
+          if (!confirmed) return;
+
+          // If multiple entries at this time → remove just this one
+          if (Array.isArray(db.users[user].entries[selectedDateStr][t])) {
+            db.users[user].entries[selectedDateStr][t].splice(idx, 1);
+
+            // If no entries left at this time → delete the time slot
+            if (db.users[user].entries[selectedDateStr][t].length === 0) {
+              delete db.users[user].entries[selectedDateStr][t];
+            }
+          } else {
+            delete db.users[user].entries[selectedDateStr][t];
+          }
+
+          saveDB(db);
+          renderCalendar();
+          renderEntriesList();
+          showPopup("Entry deleted.", "info", 2500);
+        });
+      });
+
+      right.appendChild(editBtn);
+      right.appendChild(delBtn);
+
+      li.appendChild(left);
+      li.appendChild(right);
+
+      entriesList.appendChild(li);
     });
-
-    right.appendChild(editBtn);
-    right.appendChild(delBtn);
-
-    li.appendChild(left);
-    li.appendChild(right);
-
-    entriesList.appendChild(li);
   });
 }
 
