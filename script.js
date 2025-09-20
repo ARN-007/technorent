@@ -491,6 +491,12 @@ saveBtn.addEventListener("click", () => {
     return; 
   }
 
+  // 🚨 Prevent saving entries in past slots
+  if (isPastSlot(selectedDateStr, time)) {
+    showPopup("Cannot add or edit entries in the past!", "error", 2500);
+    return;
+  }
+
   const place = (placeInput.value || "").trim();
   const remarks = (remarksInput.value || "").trim();
   const pickupDate = pickFromDate.value;
@@ -507,7 +513,6 @@ saveBtn.addEventListener("click", () => {
   }
 
   if (isEditMode) {
-    // 🔄 Replace existing entry instead of duplicating
     db.users[user].entries[selectedDateStr][editSlot][editIndex] = {
       place, remarks, pickupDate
     };
@@ -515,7 +520,6 @@ saveBtn.addEventListener("click", () => {
     editSlot = null;
     editIndex = null;
   } else {
-    // ➕ Add new entry
     db.users[user].entries[selectedDateStr][time].push({
       place, remarks, pickupDate
     });
@@ -523,11 +527,12 @@ saveBtn.addEventListener("click", () => {
 
   saveDB(db);
   renderCalendar();
-  onSelectDate(selectedDateStr); // refresh current date
+  onSelectDate(selectedDateStr);
   showPopup("Entry saved successfully!", "success", 2500);
 
   entryForm.classList.add("hidden");
 });
+
 
 
 
@@ -608,33 +613,31 @@ function renderEntriesList() {
       });
 
       // ----- Delete Button -----
-      const delBtn = document.createElement("button");
-      delBtn.className = "btn small";
-      delBtn.style.borderColor = "rgba(239,68,68,0.35)";
-      delBtn.textContent = "Delete";
-      delBtn.disabled = past;
-      delBtn.addEventListener("click", () => {
-        showConfirm(`Are you sure you want to delete this entry at ${t}?`).then(confirmed => {
-          if (!confirmed) return;
+      // ----- Delete Button -----
+const delBtn = document.createElement("button");
+delBtn.className = "btn small";
+delBtn.style.borderColor = "rgba(239,68,68,0.35)";
+delBtn.textContent = "Delete";
+// ✅ Always allow delete
+delBtn.disabled = false;
+delBtn.addEventListener("click", () => {
+  showConfirm(`Are you sure you want to delete the ${t} entry?`).then(confirmed => {
+    if (!confirmed) return;
+    if (Array.isArray(db.users[user].entries[ymd][t])) {
+      db.users[user].entries[ymd][t].splice(idx, 1);
+      if (db.users[user].entries[ymd][t].length === 0) {
+        delete db.users[user].entries[ymd][t];
+      }
+    } else {
+      delete db.users[user].entries[ymd][t];
+    }
+    saveDB(db);
+    renderCalendar();
+    onSelectDate(ymd);
+    showPopup("Entry deleted.", "info", 2500);
+  });
+});
 
-          // If multiple entries at this time → remove just this one
-          if (Array.isArray(db.users[user].entries[selectedDateStr][t])) {
-            db.users[user].entries[selectedDateStr][t].splice(idx, 1);
-
-            // If no entries left at this time → delete the time slot
-            if (db.users[user].entries[selectedDateStr][t].length === 0) {
-              delete db.users[user].entries[selectedDateStr][t];
-            }
-          } else {
-            delete db.users[user].entries[selectedDateStr][t];
-          }
-
-          saveDB(db);
-          renderCalendar();
-          renderEntriesList();
-          showPopup("Entry deleted.", "info", 2500);
-        });
-      });
 
       right.appendChild(editBtn);
       right.appendChild(delBtn);
