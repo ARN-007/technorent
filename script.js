@@ -345,6 +345,7 @@ function onSelectDate(ymd) {
     pickupEntries.forEach(pickupEntry => {
       const li = document.createElement("li");
       li.className = "entry readonly";
+      if (pickupEntry.canceled) li.classList.add("canceled");
       li.innerHTML = `
         <div style="flex:1">
           <div class="title">${pickupEntry.place || "(No place)"}</div>
@@ -371,9 +372,10 @@ function onSelectDate(ymd) {
   } else {
     times.forEach(t => {
       const entryList = Array.isArray(map[t]) ? map[t] : [map[t]];
-      entryList.forEach(({ place = "", remarks = "", pickupDate = "" }, idx) => {
+      entryList.forEach(({ place = "", remarks = "", pickupDate = "", canceled = false }, idx) => {
         const li = document.createElement("li");
         li.className = "entry";
+        if (canceled) li.classList.add("canceled");
 
         const left = document.createElement("div");
         left.style.flex = "1";
@@ -402,7 +404,7 @@ function onSelectDate(ymd) {
         const editBtn = document.createElement("button");
         editBtn.className = "btn small";
         editBtn.textContent = "Edit";
-        editBtn.disabled = past;
+        editBtn.disabled = past || canceled;
         editBtn.addEventListener("click", () => {
           timePicker.value = t;
           placeInput.value = place;
@@ -419,27 +421,20 @@ function onSelectDate(ymd) {
           placeInput.focus();
         });
 
-        // ----- Delete Button -----
+        // ----- Cancel Button -----
         const delBtn = document.createElement("button");
         delBtn.className = "btn small";
         delBtn.style.borderColor = "rgba(239,68,68,0.35)";
-        delBtn.textContent = "Delete";
-        delBtn.disabled = past;
+        delBtn.textContent = canceled ? "Canceled" : "Cancel";
+        delBtn.disabled = past || canceled;
         delBtn.addEventListener("click", () => {
-          showConfirm(`Are you sure you want to delete the ${t} entry?`).then(confirmed => {
+          showConfirm(`Are you sure you want to cancel the ${t} entry?`).then(confirmed => {
             if (!confirmed) return;
-            if (Array.isArray(db.users[user].entries[ymd][t])) {
-              db.users[user].entries[ymd][t].splice(idx, 1);
-              if (db.users[user].entries[ymd][t].length === 0) {
-                delete db.users[user].entries[ymd][t];
-              }
-            } else {
-              delete db.users[user].entries[ymd][t];
-            }
+            db.users[user].entries[ymd][t][idx].canceled = true;
             saveDB(db);
             renderCalendar();
             onSelectDate(ymd);
-            showPopup("Entry deleted.", "info", 2500);
+            showPopup("Entry marked as canceled.", "info", 2500);
           });
         });
 
@@ -454,6 +449,7 @@ function onSelectDate(ymd) {
     });
   }
 }
+
 
 
 
@@ -568,10 +564,11 @@ function renderEntriesList() {
     const entriesAtTime = Array.isArray(map[t]) ? map[t] : [map[t]];
 
     entriesAtTime.forEach((entry, idx) => {
-      const { place = "", remarks = "", pickupDate = "" } = entry || {};
+      const { place = "", remarks = "", pickupDate = "", canceled = false } = entry || {};
 
       const li = document.createElement("li");
       li.className = "entry";
+      if (canceled) li.classList.add("canceled");
 
       const left = document.createElement("div");
       left.style.flex = "1";
@@ -600,7 +597,7 @@ function renderEntriesList() {
       const editBtn = document.createElement("button");
       editBtn.className = "btn small";
       editBtn.textContent = "Edit";
-      editBtn.disabled = past;
+      editBtn.disabled = past || canceled;
       editBtn.addEventListener("click", () => {
         timePicker.value = t;
         placeInput.value = place;
@@ -612,32 +609,22 @@ function renderEntriesList() {
         placeInput.focus();
       });
 
-      // ----- Delete Button -----
-      // ----- Delete Button -----
-const delBtn = document.createElement("button");
-delBtn.className = "btn small";
-delBtn.style.borderColor = "rgba(239,68,68,0.35)";
-delBtn.textContent = "Delete";
-// ✅ Always allow delete
-delBtn.disabled = false;
-delBtn.addEventListener("click", () => {
-  showConfirm(`Are you sure you want to delete the ${t} entry?`).then(confirmed => {
-    if (!confirmed) return;
-    if (Array.isArray(db.users[user].entries[ymd][t])) {
-      db.users[user].entries[ymd][t].splice(idx, 1);
-      if (db.users[user].entries[ymd][t].length === 0) {
-        delete db.users[user].entries[ymd][t];
-      }
-    } else {
-      delete db.users[user].entries[ymd][t];
-    }
-    saveDB(db);
-    renderCalendar();
-    onSelectDate(ymd);
-    showPopup("Entry deleted.", "info", 2500);
-  });
-});
-
+      // ----- Cancel Button -----
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn small";
+      delBtn.style.borderColor = "rgba(239,68,68,0.35)";
+      delBtn.textContent = canceled ? "Canceled" : "Cancel";
+      delBtn.disabled = past || canceled;
+      delBtn.addEventListener("click", () => {
+        showConfirm(`Are you sure you want to cancel the ${t} entry?`).then(confirmed => {
+          if (!confirmed) return;
+          db.users[user].entries[selectedDateStr][t][idx].canceled = true;
+          saveDB(db);
+          renderCalendar();
+          onSelectDate(selectedDateStr);
+          showPopup("Entry marked as canceled.", "info", 2500);
+        });
+      });
 
       right.appendChild(editBtn);
       right.appendChild(delBtn);
