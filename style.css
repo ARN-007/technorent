@@ -320,3 +320,8 @@ hr{
 .entry.canceled .title {
   text-decoration: line-through;
 }
+
+.badge-count.canceled-badge {
+  background: #dc2626; /* red */
+  color: white;
+}

@@ -52,6 +52,9 @@ const appView = document.getElementById("app");
 const loginForm = document.getElementById("loginForm");
 const greetingEl = document.getElementById("greeting");
 const logoutBtn = document.getElementById("logoutBtn");
+const nameInput = document.getElementById("nameInput");
+const numberInput = document.getElementById("numberInput");
+
 
 const prevMonthBtn = document.getElementById("prevMonth");
 const nextMonthBtn = document.getElementById("nextMonth");
@@ -282,21 +285,47 @@ function renderCalendar() {
     }
 
     // Highlight if this date is a pickup date for ANY entry in the whole DB
-    for (const [d, times] of Object.entries(db.users[user]?.entries || {})) {
-      for (const entryOrList of Object.values(times)) {
-        const entryList = Array.isArray(entryOrList) ? entryOrList : [entryOrList];
-        entryList.forEach(entry => {
-          if (entry.pickupDate && fmtDateYMD(new Date(entry.pickupDate)) === ymd) {
-            cell.classList.add("pickup-highlight");
-          }
-        });
+for (const [d, times] of Object.entries(db.users[user]?.entries || {})) {
+  for (const entryOrList of Object.values(times)) {
+    const entryList = Array.isArray(entryOrList) ? entryOrList : [entryOrList];
+    entryList.forEach(entry => {
+      // ✅ Only highlight if not canceled
+      if (entry.pickupDate && !entry.canceled && fmtDateYMD(new Date(entry.pickupDate)) === ymd) {
+        cell.classList.add("pickup-highlight");
       }
-    }
+    });
+  }
+}
 
-    if (count > 0) {
-      badge.textContent = count;
-      cell.appendChild(badge);
+
+   // Count active vs canceled
+let activeCount = 0;
+let canceledCount = 0;
+for (const t in entries) {
+  const entryList = Array.isArray(entries[t]) ? entries[t] : [entries[t]];
+  entryList.forEach(e => {
+    if (e.canceled) {
+      canceledCount++;
+    } else {
+      activeCount++;
     }
+  });
+}
+
+// Show badge(s)
+if (activeCount > 0) {
+  const activeBadge = document.createElement("div");
+  activeBadge.className = "badge-count";
+  activeBadge.textContent = activeCount;
+  cell.appendChild(activeBadge);
+}
+if (canceledCount > 0) {
+  const canceledBadge = document.createElement("div");
+  canceledBadge.className = "badge-count canceled-badge";
+  canceledBadge.textContent = canceledCount;
+  cell.appendChild(canceledBadge);
+}
+
 
     cell.appendChild(dayNumEl);
     cell.addEventListener("click", () => onSelectDate(ymd));
@@ -323,17 +352,19 @@ function onSelectDate(ymd) {
   entriesList.innerHTML = ""; // clear before showing fresh
 
   // 🔍 Collect pickup entries pointing to this date
-  let pickupEntries = [];
-  for (const [d, times] of Object.entries(db.users[user]?.entries || {})) {
-    for (const [time, entryOrList] of Object.entries(times)) {
-      const entryList = Array.isArray(entryOrList) ? entryOrList : [entryOrList];
-      entryList.forEach(entry => {
-        if (entry.pickupDate && fmtDateYMD(new Date(entry.pickupDate)) === ymd) {
-          pickupEntries.push({ ...entry, time });
-        }
-      });
-    }
+let pickupEntries = [];
+for (const [d, times] of Object.entries(db.users[user]?.entries || {})) {
+  for (const [time, entryOrList] of Object.entries(times)) {
+    const entryList = Array.isArray(entryOrList) ? entryOrList : [entryOrList];
+    entryList.forEach(entry => {
+      // ✅ Only include if not canceled
+      if (entry.pickupDate && !entry.canceled && fmtDateYMD(new Date(entry.pickupDate)) === ymd) {
+        pickupEntries.push({ ...entry, time });
+      }
+    });
   }
+}
+
 
   // 🟢 Show pickup entries in read-only form
   if (pickupEntries.length > 0) {
@@ -372,7 +403,8 @@ function onSelectDate(ymd) {
   } else {
     times.forEach(t => {
       const entryList = Array.isArray(map[t]) ? map[t] : [map[t]];
-      entryList.forEach(({ place = "", remarks = "", pickupDate = "", canceled = false }, idx) => {
+      entryList.forEach(({ name = "", number = "", place = "", remarks = "", pickupDate = "", canceled = false }, idx) => {
+
         const li = document.createElement("li");
         li.className = "entry";
         if (canceled) li.classList.add("canceled");
@@ -382,7 +414,8 @@ function onSelectDate(ymd) {
 
         const title = document.createElement("div");
         title.className = "title";
-        title.textContent = place || "(No place)";
+       title.textContent = `${name || "(No name)"} — ${number || "(No number)"}`;
+
 
         const meta = document.createElement("div");
         meta.className = "meta";
@@ -493,9 +526,11 @@ saveBtn.addEventListener("click", () => {
     return;
   }
 
-  const place = (placeInput.value || "").trim();
-  const remarks = (remarksInput.value || "").trim();
-  const pickupDate = pickFromDate.value;
+const name = (nameInput.value || "").trim();
+const number = (numberInput.value || "").trim();
+const place = (placeInput.value || "").trim();
+const remarks = (remarksInput.value || "").trim();
+const pickupDate = pickFromDate.value;
 
   const db = loadDB();
   ensureUser(db, user);
@@ -517,8 +552,9 @@ saveBtn.addEventListener("click", () => {
     editIndex = null;
   } else {
     db.users[user].entries[selectedDateStr][time].push({
-      place, remarks, pickupDate
-    });
+  name, number, place, remarks, pickupDate
+});
+
   }
 
   saveDB(db);

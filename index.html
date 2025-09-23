@@ -76,27 +76,38 @@
           </select>
         </div>
 
-        <div id="entryForm" class="hidden">
-          <div class="field">
-            <label for="placeInput">Place</label>
-            <input id="placeInput" type="text" placeholder="e.g., Conference Room B" />
-          </div>
+       <div id="entryForm" class="hidden">
+  <div class="field">
+    <label for="nameInput">Name</label>
+    <input id="nameInput" type="text" placeholder="e.g., John Doe" />
+  </div>
 
-          <div class="field">
-            <label for="remarksInput">Remarks</label>
-            <textarea id="remarksInput" rows="3" placeholder="Notes / agenda / reminders"></textarea>
-          </div>
+  <div class="field">
+    <label for="numberInput">Number</label>
+    <input id="numberInput" type="tel" placeholder="e.g., 9876543210" />
+  </div>
 
-          <div class="field">
-             <label for="pickFromDate">Pick From Location Date</label>
-             <input id="pickFromDate" type="date" required />
-          </div>
+  <div class="field">
+    <label for="placeInput">Place</label>
+    <input id="placeInput" type="text" placeholder="e.g., Conference Room B" />
+  </div>
 
-          <div class="actions">
-            <button id="saveBtn" class="btn primary">Save</button>
-            <button id="clearBtn" class="btn ghost">Clear</button>
-          </div>
-        </div>
+  <div class="field">
+    <label for="remarksInput">Remarks</label>
+    <textarea id="remarksInput" rows="3" placeholder="Notes / agenda / reminders"></textarea>
+  </div>
+
+  <div class="field">
+    <label for="pickFromDate">Pickup Date</label>
+    <input id="pickFromDate" type="date" required />
+  </div>
+
+  <div class="actions">
+    <button id="saveBtn" class="btn primary">Save</button>
+    <button id="clearBtn" class="btn ghost">Clear</button>
+  </div>
+</div>
+
 
         <hr />
 
